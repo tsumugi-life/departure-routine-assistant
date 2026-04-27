@@ -1,0 +1,499 @@
+{\rtf1\ansi\ansicpg932\cocoartf2867
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+\paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 import React, \{ useEffect, useMemo, useState \} from "react";\
+\
+\
+const EVENT_THEME = \{\
+  \uc0\u23398 \u26657 : \{ card: "bg-slate-100 border-slate-300", soft: "bg-slate-200", icon: "\u55356 \u57323 " \},\
+  \uc0\u12501 \u12521 : \{ card: "bg-rose-50 border-rose-200", soft: "bg-rose-100", icon: "\u55356 \u57146 " \},\
+  \uc0\u36890 \u38498 : \{ card: "bg-emerald-50 border-emerald-200", soft: "bg-emerald-100", icon: "\u55356 \u57317 " \},\
+  \uc0\u36023 \u12356 \u29289 : \{ card: "bg-stone-100 border-stone-300", soft: "bg-stone-200", icon: "\u55357 \u57042 " \},\
+  \uc0\u32722 \u12356 \u20107 : \{ card: "bg-indigo-50 border-indigo-200", soft: "bg-indigo-100", icon: "\u55357 \u56538 " \},\
+  default: \{ card: "bg-stone-50 border-stone-200", soft: "bg-stone-100", icon: "\uc0\u55357 \u56787 \u65039 " \},\
+\};\
+\
+const getTheme = (title) => EVENT_THEME[title] || EVENT_THEME.default;\
+const toMinutes = (time) => \{\
+  const [h, m] = time.split(":").map(Number);\
+  return h * 60 + m;\
+\};\
+const minutesUntil = (time, now) => toMinutes(time) - (now.getHours() * 60 + now.getMinutes());\
+const formatUntil = (mins) => \{\
+  if (mins < 0) return "\uc0\u20986 \u30330 \u26178 \u21051 \u12434 \u36942 \u12366 \u12390 \u12356 \u12414 \u12377 ";\
+  if (mins < 60) return `\uc0\u20986 \u30330 \u12414 \u12391 $\{mins\}\u20998 `;\
+  const h = Math.floor(mins / 60);\
+  const m = mins % 60;\
+  return m === 0 ? `\uc0\u12354 \u12392 $\{h\}\u26178 \u38291 ` : `\u12354 \u12392 $\{h\}\u26178 \u38291 $\{m\}\u20998 `;\
+\};\
+\
+export default function DepartureRoutineAssistantV2() \{\
+  const [activeScreen, setActiveScreen] = useState("check");\
+  const [now, setNow] = useState(new Date());\
+  const [dailyItems, setDailyItems] = useState(["\uc0\u37749 ", "\u12473 \u12510 \u12507 ", "\u36001 \u24067 "]);\
+  const [templates, setTemplates] = useState([\
+    \{ id: "school", name: "\uc0\u23398 \u26657 \u12475 \u12483 \u12488 ", items: ["\u31558 \u31665 ", "\u12494 \u12540 \u12488 ", "\u27700 \u31570 "] \},\
+    \{ id: "hula", name: "\uc0\u12501 \u12521 \u12475 \u12483 \u12488 ", items: ["\u12497 \u12454 ", "\u27700 \u31570 ", "\u12494 \u12540 \u12488 "] \},\
+    \{ id: "hospital", name: "\uc0\u36890 \u38498 \u12475 \u12483 \u12488 ", items: ["\u35386 \u23519 \u21048 ", "\u20445 \u38522 \u35388 ", "\u12362 \u34220 \u25163 \u24115 "] \},\
+    \{ id: "shopping", name: "\uc0\u36023 \u12356 \u29289 \u12475 \u12483 \u12488 ", items: ["\u12456 \u12467 \u12496 \u12483 \u12464 ", "\u12509 \u12452 \u12531 \u12488 \u12459 \u12540 \u12489 "] \},\
+  ]);\
+  const [events, setEvents] = useState([\
+    \{ id: 1, title: "\uc0\u23398 \u26657 ", time: "08:00", icon: "\u55356 \u57323 ", templateId: "school", specialItems: ["\u30003 \u36796 \u26360 "], checked: false,  \},\
+    \{ id: 2, title: "\uc0\u12501 \u12521 ", time: "17:30", icon: "\u55356 \u57146 ", templateId: "hula", specialItems: [], checked: false,  \},\
+    \{ id: 3, title: "\uc0\u36890 \u38498 ", time: "19:00", icon: "\u55356 \u57317 ", templateId: "hospital", specialItems: ["\u20445 \u38522 \u35388 "], checked: false,  \},\
+  ]);\
+  const [eventNameOptions, setEventNameOptions] = useState([\
+    \{ name: "\uc0\u23398 \u26657 ", icon: "\u55356 \u57323 " \},\
+    \{ name: "\uc0\u12501 \u12521 ", icon: "\u55356 \u57146 " \},\
+    \{ name: "\uc0\u36890 \u38498 ", icon: "\u55356 \u57317 " \},\
+    \{ name: "\uc0\u36023 \u12356 \u29289 ", icon: "\u55357 \u57042 " \},\
+    \{ name: "\uc0\u32722 \u12356 \u20107 ", icon: "\u55357 \u56538 " \},\
+  ]);\
+  const [quickItems, setQuickItems] = useState(["\uc0\u30003 \u36796 \u26360 ", "\u20445 \u38522 \u35388 ", "\u12524 \u12452 \u12531 \u12467 \u12540 \u12488 ", "\u27700 \u31570 "]);\
+  const [templateExclusions, setTemplateExclusions] = useState(\{\});\
+  const [selectedEventId, setSelectedEventId] = useState(1);\
+  const [confirmIndex, setConfirmIndex] = useState(0);\
+  const [completed, setCompleted] = useState(false);\
+  const [notYetMessage, setNotYetMessage] = useState(false);\
+  const [voiceEnabled, setVoiceEnabled] = useState(true);\
+  const [prepReminderEnabled, setPrepReminderEnabled] = useState(true);\
+  const [prepReminderTime, setPrepReminderTime] = useState("23:00");\
+  const [prepDoneToday, setPrepDoneToday] = useState(false);\
+\
+  useEffect(() => \{\
+    const timer = setInterval(() => setNow(new Date()), 1000);\
+    return () => clearInterval(timer);\
+  \}, []);\
+\
+    const visibleEvents = useMemo(\
+    () => events.slice().sort((a,b)=>toMinutes(a.time)-toMinutes(b.time)),\
+    [events]\
+  );\
+  const nextEvent = useMemo(() => \{\
+    const upcoming = visibleEvents.find((event) => minutesUntil(event.time, now) >= 0 && !event.checked);\
+    return upcoming || visibleEvents.find((event) => minutesUntil(event.time, now) >= 0) || visibleEvents[0] || events[0];\
+  \}, [visibleEvents, now, events]);\
+  const selectedEvent = events.find((event) => event.id === selectedEventId) || nextEvent;\
+  const selectedTemplate = templates.find((template) => template.id === selectedEvent?.templateId);\
+  const confirmItems = useMemo(() => \{\
+    const excluded = templateExclusions[selectedEvent?.id] || [];\
+    const templateItems = (selectedTemplate?.items || []).filter((item) => !excluded.includes(item));\
+    return [\
+      ...(selectedEvent?.specialItems || []).map((name) => (\{ name, category: "\uc0\u20170 \u26085 \u12384 \u12369 " \})),\
+      ...templateItems.map((name) => (\{ name, category: selectedTemplate?.name || "\uc0\u12471 \u12540 \u12531 \u21029 \u12475 \u12483 \u12488 " \})),\
+      ...dailyItems.map((name) => (\{ name, category: "\uc0\u27598 \u26085 " \})),\
+    ].filter((item) => item.name?.trim());\
+  \}, [selectedEvent, selectedTemplate, dailyItems, templateExclusions]);\
+\
+  const canSpeak = typeof window !== "undefined" && "speechSynthesis" in window;\
+  const speakText = (text) => \{\
+    if (!voiceEnabled || !canSpeak || !text) return;\
+    window.speechSynthesis.cancel();\
+    const utterance = new SpeechSynthesisUtterance(text);\
+    utterance.lang = "ja-JP";\
+    utterance.rate = 0.9;\
+    window.speechSynthesis.speak(utterance);\
+  \};\
+  const buildSpeechText = (item) => item?.category === "\uc0\u20170 \u26085 \u12384 \u12369 "\
+    ? `\uc0\u20170 \u26085 \u12399 \u29305 \u21029 \u12394 \u25345 \u12385 \u29289 \u12364 \u12354 \u12426 \u12414 \u12377 \u12290 $\{item.name\}\u12391 \u12377 \u12290 \u12418 \u12358 \u19968 \u24230 \u30906 \u35469 \u12375 \u12414 \u12377 \u12290 $\{item.name\}\u12290 `\
+    : `$\{item?.name || ""\}\uc0\u12289 \u25345 \u12387 \u12383 \u65311 `;\
+\
+  useEffect(() => \{\
+    if (activeScreen === "confirm" && confirmItems[confirmIndex] && !completed) \{\
+      const timer = setTimeout(() => speakText(buildSpeechText(confirmItems[confirmIndex])), 250);\
+      return () => clearTimeout(timer);\
+    \}\
+  \}, [activeScreen, confirmIndex, completed, selectedEventId, voiceEnabled]);\
+\
+  useEffect(() => \{\
+    if (activeScreen === "confirm" && completed) \{\
+      const timer = setTimeout(() => speakText("\uc0\u20986 \u30330 \u30906 \u35469 \u23436 \u20102 \u12391 \u12377 \u12290 \u12356 \u12387 \u12390 \u12425 \u12387 \u12375 \u12419 \u12356 \u12290 "), 250);\
+      return () => clearTimeout(timer);\
+    \}\
+  \}, [activeScreen, completed, voiceEnabled]);\
+\
+  const changeScreen = (screen) => \{\
+    if (canSpeak) window.speechSynthesis.cancel();\
+    setActiveScreen(screen);\
+  \};\
+  const updateEvent = (id, field, value) => setEvents((prev) => prev.map((e) => (e.id === id ? \{ ...e, [field]: value \} : e)));\
+  const startConfirmation = (eventId) => \{\
+    if (canSpeak) window.speechSynthesis.cancel();\
+    setSelectedEventId(eventId || selectedEventId);\
+    setConfirmIndex(0);\
+    setCompleted(false);\
+    setNotYetMessage(false);\
+    setActiveScreen("confirm");\
+  \};\
+  const addEvent = (data) => \{\
+    const newEvent = \{\
+      id: Date.now(),\
+      title: data.title,\
+      time: data.time,\
+      icon: data.icon || getTheme(data.title).icon,\
+      templateId: data.templateId || templates[0]?.id,\
+      specialItems: [],\
+      checked: false,\
+    \};\
+    setEvents((prev) => [...prev, newEvent]);\
+    if (!eventNameOptions.some((opt) => opt.name === data.title)) \{\
+      setEventNameOptions((prev) => [...prev.slice(0, 4), \{ name: data.title, icon: newEvent.icon \}]);\
+    \}\
+  \};\
+  const duplicateEvent = (event) => addEvent(\{ ...event, title: `$\{event.title\}\uc0\u12467 \u12500 \u12540 ` \});\
+  const removeEvent = (id) => setEvents((prev) => prev.filter((event) => event.id !== id));\
+  const addTemplate = () => setTemplates((prev) => [...prev, \{ id: `template-$\{Date.now()\}`, name: "\uc0\u26032 \u12375 \u12356 \u12475 \u12483 \u12488 ", items: ["\u26032 \u12375 \u12356 \u25345 \u12385 \u29289 "] \}]);\
+  const updateTemplate = (id, field, value) => setTemplates((prev) => prev.map((t) => (t.id === id ? \{ ...t, [field]: value \} : t)));\
+  const addTemplateItem = (id) => setTemplates((prev) => prev.map((t) => (t.id === id ? \{ ...t, items: [...t.items, "\uc0\u26032 \u12375 \u12356 \u25345 \u12385 \u29289 "] \} : t)));\
+  const updateTemplateItem = (id, index, value) => setTemplates((prev) => prev.map((t) => (t.id === id ? \{ ...t, items: t.items.map((item, i) => (i === index ? value : item)) \} : t)));\
+  const removeTemplateItem = (id, index) => setTemplates((prev) => prev.map((t) => (t.id === id ? \{ ...t, items: t.items.filter((_, i) => i !== index) \} : t)));\
+  const removeTemplate = (id) => setTemplates((prev) => prev.filter((t) => t.id !== id));\
+\
+  const progress = confirmItems.length ? Math.round(((completed ? confirmItems.length : confirmIndex) / confirmItems.length) * 100) : 0;\
+\
+  return (\
+    <div className="min-h-screen bg-[#f7f3ec] text-stone-800 flex justify-center">\
+      <div className="w-full max-w-md min-h-screen bg-[#fbf8f2] shadow-xl relative pb-24">\
+        <header className="px-5 pt-6 pb-4 sticky top-0 bg-[#fbf8f2]/95 backdrop-blur z-10 border-b border-stone-100">\
+          \
+          <h1 className="text-2xl font-bold tracking-tight">\uc0\u20986 \u30330 \u12523 \u12540 \u12486 \u12451 \u12531 \u12539 \u12450 \u12471 \u12473 \u12479 \u12531 \u12488 </h1>\
+          <div className="mt-3 text-center text-sm font-bold text-stone-500">\uc0\u26126 \u26085 \u12398 \u28310 \u20633  \u8594  \u30906 \u35469 \u38283 \u22987  \u8594  \u20986 \u30330 </div>\
+          <div className="mt-4 rounded-[1.5rem] bg-white p-4 border border-stone-100 shadow-sm text-center">\
+            <div className="text-lg font-bold">\{now.getFullYear()\}\uc0\u24180  \{now.getMonth() + 1\}\u26376 \{now.getDate()\}\u26085 \u65288 \{now.toLocaleDateString("ja-JP", \{ weekday: "short" \}).replace("\u26332 ", "")\}\u65289 </div>\
+            <div className="text-4xl font-black mt-2 tracking-tight font-mono">\{now.toLocaleTimeString("ja-JP", \{ hour: "2-digit", minute: "2-digit", second: "2-digit" \})\}</div>\
+          </div>\
+        </header>\
+\
+        <main className="px-5 py-5 space-y-5">\
+          \{activeScreen === "check" && <HomeDashboard nextEvent=\{nextEvent\} events=\{visibleEvents\} now=\{now\} templates=\{templates\} onStart=\{startConfirmation\} />\}\
+          \{activeScreen === "prep" && (\
+            <PrepScreen\
+              setPrepDoneToday=\{setPrepDoneToday\}\
+              events=\{events\}\
+              templates=\{templates\}\
+              updateEvent=\{updateEvent\}\
+              addEvent=\{addEvent\}\
+              duplicateEvent=\{duplicateEvent\}\
+              removeEvent=\{removeEvent\}\
+              startConfirmation=\{startConfirmation\}\
+              eventNameOptions=\{eventNameOptions\}\
+              setEventNameOptions=\{setEventNameOptions\}\
+              quickItems=\{quickItems\}\
+              setQuickItems=\{setQuickItems\}\
+              templateExclusions=\{templateExclusions\}\
+              setTemplateExclusions=\{setTemplateExclusions\}\
+            />\
+          )\}\
+          \{activeScreen === "confirm" && (\
+            <ConfirmScreen\
+              event=\{selectedEvent\}\
+              items=\{confirmItems\}\
+              index=\{confirmIndex\}\
+              setIndex=\{setConfirmIndex\}\
+              completed=\{completed\}\
+              setCompleted=\{setCompleted\}\
+              progress=\{progress\}\
+              voiceEnabled=\{voiceEnabled\}\
+              setVoiceEnabled=\{setVoiceEnabled\}\
+              notYetMessage=\{notYetMessage\}\
+              setNotYetMessage=\{setNotYetMessage\}\
+              onSpeak=\{() => speakText(buildSpeechText(confirmItems[confirmIndex]))\}\
+              onDone=\{() => setEvents((prev) => prev.map((e) => (e.id === selectedEvent?.id ? \{ ...e, checked: true \} : e)))\}\
+            />\
+          )\}\
+          \{activeScreen === "settings" && (\
+            <SettingsScreen\
+              prepReminderEnabled=\{prepReminderEnabled\}\
+              setPrepReminderEnabled=\{setPrepReminderEnabled\}\
+              prepReminderTime=\{prepReminderTime\}\
+              setPrepReminderTime=\{setPrepReminderTime\}\
+              prepDoneToday=\{prepDoneToday\}\
+              goPrep=\{()=>setActiveScreen('prep')\}\
+              dailyItems=\{dailyItems\}\
+              setDailyItems=\{setDailyItems\}\
+              templates=\{templates\}\
+              addTemplate=\{addTemplate\}\
+              updateTemplate=\{updateTemplate\}\
+              addTemplateItem=\{addTemplateItem\}\
+              updateTemplateItem=\{updateTemplateItem\}\
+              removeTemplateItem=\{removeTemplateItem\}\
+              removeTemplate=\{removeTemplate\}\
+            />\
+          )\}\
+        </main>\
+        <BottomNav activeScreen=\{activeScreen\} setActiveScreen=\{changeScreen\} />\
+      </div>\
+    </div>\
+  );\
+\}\
+\
+function HomeDashboard(\{ nextEvent, events, now, templates, onStart \}) \{\
+  if (!nextEvent) return <EmptyCard text="\uc0\u20170 \u26085 \u12398 \u20986 \u30330 \u20104 \u23450 \u12399 \u12354 \u12426 \u12414 \u12379 \u12435 \u12290 " />;\
+  return (\
+    <section className="space-y-5">\
+      <h2 className="text-3xl font-black tracking-tight">\uc0\u30906 \u35469 \u38283 \u22987 </h2>\
+      <div className=\{`rounded-[2rem] border-2 p-5 shadow-sm $\{getTheme(nextEvent.title).card\}`\}>\
+        <div className="flex items-start justify-between gap-3">\
+          <div>\
+            <div className="text-sm font-bold text-stone-500">\uc0\u27425 \u12398 \u20986 \u30330 </div>\
+            <div className="text-3xl font-black mt-1">\{nextEvent.icon\} \{nextEvent.title\}</div>\
+            <div className="text-4xl font-black mt-2 font-mono">\{nextEvent.time\}</div>\
+            <div className="text-lg font-bold text-stone-600 mt-1">\{formatUntil(minutesUntil(nextEvent.time, now))\}</div>\
+          </div>\
+          <StatusBadge checked=\{nextEvent.checked\} />\
+        </div>\
+        <button onClick=\{() => onStart(nextEvent.id)\} className="w-full mt-5 rounded-[1.5rem] bg-emerald-700 text-white py-5 text-xl font-black shadow-md">\uc0\u30906 \u35469 \u12377 \u12427 </button>\
+      </div>\
+      <div className="space-y-3">\
+        \{events.map((event) => <TimelineEventCard key=\{event.id\} event=\{event\} templates=\{templates\} now=\{now\} onStart=\{onStart\} />)\}\
+      </div>\
+    </section>\
+  );\
+\}\
+\
+function TimelineEventCard(\{ event, templates, now, onStart \}) \{\
+  const template = templates.find((t) => t.id === event.templateId);\
+  return (\
+    <button onClick=\{() => onStart(event.id)\} className=\{`w-full rounded-[1.5rem] p-4 border shadow-sm text-left $\{getTheme(event.title).card\}`\}>\
+      <div className="flex items-center gap-3">\
+        <div className=\{`w-14 h-14 rounded-2xl $\{getTheme(event.title).soft\} flex items-center justify-center text-2xl`\}>\{event.icon\}</div>\
+        <div className="flex-1">\
+          <div><span className="font-mono font-bold mr-2">\{event.time\}</span><span className="text-2xl font-black">\{event.title\}</span></div>\
+          <div className="text-sm text-stone-500 mt-1">\{template?.name || "\uc0\u26410 \u35373 \u23450 "\} \u12539  \{formatUntil(minutesUntil(event.time, now))\}</div>\
+        </div>\
+        <StatusBadge checked=\{event.checked\} />\
+      </div>\
+    </button>\
+  );\
+\}\
+\
+function PrepScreen(\{ setPrepDoneToday,  events, templates, updateEvent, addEvent, duplicateEvent, removeEvent, startConfirmation, eventNameOptions, setEventNameOptions, quickItems, setQuickItems, templateExclusions, setTemplateExclusions \}) \{\
+  const [showAdd, setShowAdd] = useState(false);\
+  return (\
+    <section className="space-y-4">\
+      <ScreenTitle title="\uc0\u26126 \u26085 \u12398 \u28310 \u20633 " subtitle="" />\
+      <div className="rounded-[2rem] bg-white p-5 shadow-sm border border-stone-100">\
+        <h3 className="text-2xl font-black mb-4">\uc0\u27598 \u26085 \u25345 \u12388 \u12418 \u12398 </h3>\
+        <div className="grid grid-cols-3 gap-2">\
+          <div className="rounded-xl bg-stone-100 px-3 py-3 text-center font-bold">\uc0\u37749 </div>\
+          <div className="rounded-xl bg-stone-100 px-3 py-3 text-center font-bold">\uc0\u12473 \u12510 \u12507 </div>\
+          <div className="rounded-xl bg-stone-100 px-3 py-3 text-center font-bold">\uc0\u36001 \u24067 </div>\
+        </div>\
+      </div>\
+      \
+      <button onClick=\{() => setShowAdd(!showAdd)\} className="w-full rounded-2xl bg-emerald-700 text-white py-4 font-black shadow-md">\uc0\u65291 \u20986 \u30330 \u12434 \u36861 \u21152 </button>\
+      \{showAdd && <NewEventForm templates=\{templates\} eventNameOptions=\{eventNameOptions\} setEventNameOptions=\{setEventNameOptions\} addEvent=\{(data) => \{ addEvent(data); setShowAdd(false); \}\} />\}\
+      \{events.map((event) => \{\
+        const template = templates.find((t) => t.id === event.templateId);\
+        const excluded = templateExclusions[event.id] || [];\
+        const activeCount = (template?.items || []).filter((item) => !excluded.includes(item)).length + (event.specialItems || []).length + 3;\
+        return (\
+          <div key=\{event.id\} className=\{`rounded-[2rem] border shadow-sm p-5 space-y-4 $\{getTheme(event.title).card\}`\}>\
+            <InlineEventNameEditor event=\{event\} updateEvent=\{updateEvent\} eventNameOptions=\{eventNameOptions\} setEventNameOptions=\{setEventNameOptions\} />\
+            <UnifiedChooserField label="\uc0\u20986 \u30330 \u26178 \u21051 " value=\{event.time\} icon="\u55357 \u56658 ">\
+              <input type="time" value=\{event.time\} onChange=\{(e) => updateEvent(event.id, "time", e.target.value)\} className="w-full rounded-xl border px-3 py-3" />\
+            </UnifiedChooserField>\
+\
+            <UnifiedChooserField label="\uc0\u12471 \u12540 \u12531 \u21029 \u12475 \u12483 \u12488 " value=\{`$\{template?.name || "\u26410 \u35373 \u23450 "\}`\}>\
+              <select value=\{event.templateId\} onChange=\{(e) => updateEvent(event.id, "templateId", e.target.value)\} className="w-full rounded-xl border px-4 py-4 mb-3 text-2xl font-black tracking-tight">\
+                \{templates.map((t) => <option key=\{t.id\} value=\{t.id\}>\{t.name\}</option>)\}\
+              </select>\
+              <div className="space-y-2">\
+                \{(template?.items || []).map((item) => \{\
+                  const off = excluded.includes(item);\
+                  return <button key=\{item\} onClick=\{() => setTemplateExclusions((prev) => (\{ ...prev, [event.id]: off ? excluded.filter((x) => x !== item) : [...excluded, item] \}))\} className="w-full flex justify-between rounded-xl px-3 py-2 bg-white"><span>\{off ? "\uc0\u9744 " : "\u9745 "\} \{item\}</span><span className="text-xs">\{off ? "\u38500 \u22806 \u20013 " : "\u30906 \u35469 \u23550 \u35937 "\}</span></button>;\
+                \})\}\
+              </div>\
+            </UnifiedChooserField>\
+            <TapField label="\uc0\u20170 \u26085 \u12384 \u12369 \u25345 \u12385 \u29289 " value="" valueClassName="text-sm font-bold text-stone-500">\
+              <SpecialItemsEditor event=\{event\} updateEvent=\{updateEvent\} quickItems=\{quickItems\} setQuickItems=\{setQuickItems\} />\
+            </TapField>\
+            \
+            <div className="rounded-2xl bg-white/70 p-4 font-bold">\uc0\u30906 \u35469 \u23550 \u35937  \{activeCount\}\u28857 </div>\
+            <div className="grid grid-cols-1 gap-2">\
+              <button onClick=\{() => startConfirmation(event.id)\} className="rounded-2xl bg-emerald-700 text-white py-4 font-black text-lg shadow-md">\uc0\u30906 \u35469 \u12377 \u12427 </button>\
+              \
+            </div>\
+            <button onClick=\{() => removeEvent(event.id)\} className="w-auto px-4 py-2 text-sm rounded-xl bg-white/70 font-bold text-stone-500">\uc0\u12371 \u12398 \u20986 \u30330 \u28310 \u20633 \u12434 \u21066 \u38500 \u12377 \u12427 </button>\
+          </div>\
+        );\
+      \})\}\
+    </section>\
+  );\
+\}\
+\
+function NewEventForm(\{ templates, eventNameOptions, setEventNameOptions, addEvent \}) \{\
+  const [selected, setSelected] = useState(eventNameOptions[0]);\
+  const [custom, setCustom] = useState("");\
+  const [time, setTime] = useState("09:00");\
+  const [templateId, setTemplateId] = useState(templates[0]?.id || "");\
+  const submit = () => \{\
+    const title = custom.trim() || selected.name;\
+    const icon = custom.trim() ? "\uc0\u55357 \u56787 \u65039 " : selected.icon;\
+    if (custom.trim() && !eventNameOptions.some((opt) => opt.name === title)) setEventNameOptions((prev) => [...prev.slice(0, 4), \{ name: title, icon \}]);\
+    addEvent(\{ title, icon, time, templateId \});\
+  \};\
+  return (\
+    <div className="rounded-[2rem] bg-white border border-stone-200 p-5 shadow-sm space-y-4">\
+      <h3 className="text-xl font-black">\uc0\u26032 \u12375 \u12356 \u20986 \u30330 \u12434 \u20316 \u12427 </h3>\
+      <div className="grid grid-cols-2 gap-2">\
+        \{eventNameOptions.slice(0, 5).map((opt) => <button key=\{opt.name\} onClick=\{() => \{ setSelected(opt); setCustom(""); \}\} className=\{`rounded-xl px-3 py-3 font-bold text-left $\{selected?.name === opt.name && !custom ? "bg-emerald-100" : "bg-stone-100"\}`\}>\{opt.icon\} \{opt.name\}</button>)\}\
+      </div>\
+      <input value=\{custom\} onChange=\{(e) => setCustom(e.target.value)\} placeholder="\uc0\u65291 \u26032 \u35215 \u20837 \u21147 " className="w-full rounded-xl border px-3 py-3" />\
+      <input type="time" value=\{time\} onChange=\{(e) => setTime(e.target.value)\} className="w-full rounded-xl border px-4 py-4 text-2xl font-black tracking-tight" />\
+      \
+      <select value=\{templateId\} onChange=\{(e) => setTemplateId(e.target.value)\} className="w-full rounded-xl border px-4 py-4 text-2xl font-black tracking-tight">\{templates.map((t) => <option key=\{t.id\} value=\{t.id\}>\{t.name\}</option>)\}</select>\
+      <button onClick=\{submit\} className="w-full rounded-2xl bg-emerald-700 text-white py-4 font-black shadow-md">\uc0\u12371 \u12398 \u20869 \u23481 \u12391 \u36861 \u21152 </button>\
+    </div>\
+  );\
+\}\
+\
+function InlineEventNameEditor(\{ event, updateEvent, eventNameOptions, setEventNameOptions \}) \{\
+  const [open, setOpen] = useState(false);\
+  const [custom, setCustom] = useState("");\
+  const choose = (opt) => \{ updateEvent(event.id, "title", opt.name); updateEvent(event.id, "icon", opt.icon); setOpen(false); \};\
+  const addCustom = () => \{\
+    const name = custom.trim();\
+    if (!name) return;\
+    const opt = \{ name, icon: "\uc0\u55357 \u56787 \u65039 " \};\
+    setEventNameOptions((prev) => [...prev.slice(0, 4), opt]);\
+    choose(opt);\
+    setCustom("");\
+  \};\
+  return (\
+    <div>\
+      <div className="text-xs font-bold text-stone-500 mb-1">\uc0\u20986 \u30330 \u21517 </div>\
+      <button onClick=\{() => setOpen(!open)\} className="w-full rounded-xl bg-white/70 border px-4 py-3 flex justify-between items-center font-black text-3xl tracking-tight"><span>\{event.icon\} \{event.title\}</span><span className="text-sm font-bold px-3 py-1 rounded-full bg-stone-100 border text-stone-600">\uc0\u22793 \u26356 </span></button>\
+      \{open && <div className="mt-3 rounded-2xl bg-white border p-3 space-y-2 shadow-sm">\
+        \{eventNameOptions.slice(0, 5).map((opt, index) => <div key=\{opt.name\} className="flex gap-2"><button onClick=\{() => choose(opt)\} className="flex-1 text-left rounded-xl px-4 py-3 bg-stone-100 font-bold">\{opt.icon\} \{opt.name\}</button><button onClick=\{() => index > 0 && setEventNameOptions((prev) => \{ const arr = [...prev]; [arr[index - 1], arr[index]] = [arr[index], arr[index - 1]]; return arr; \})\} className="px-3 rounded-xl bg-stone-200">\uc0\u8593 </button><button onClick=\{() => setEventNameOptions((prev) => prev.filter((x) => x.name !== opt.name))\} className="px-3 rounded-xl bg-stone-200">\'d7</button></div>)\}\
+        <input value=\{custom\} onChange=\{(e) => setCustom(e.target.value)\} placeholder="\uc0\u65291 \u26032 \u35215 \u20837 \u21147 " className="w-full rounded-xl border px-3 py-3" />\
+        <button onClick=\{addCustom\} className="w-full rounded-xl bg-emerald-700 text-white py-3 font-black">\uc0\u36861 \u21152 </button>\
+      </div>\}\
+    </div>\
+  );\
+\}\
+\
+\
+\
+\
+\
+function SpecialItemsEditor(\{ event, updateEvent, quickItems, setQuickItems \}) \{\
+  const addItem = (item) => \{\
+    if (!item) return;\
+    if (!(event.specialItems || []).includes(item)) updateEvent(event.id, "specialItems", [...(event.specialItems || []), item]);\
+    if (!quickItems.includes(item)) setQuickItems((prev) => [item, ...prev].slice(0, 10));\
+  \};\
+  return <div className="space-y-3">\{(event.specialItems || []).map((item, index) => <div key=\{index\} className="flex gap-2"><input value=\{item\} onChange=\{(e) => \{ const arr = [...event.specialItems]; arr[index] = e.target.value; updateEvent(event.id, "specialItems", arr); \}\} className="flex-1 rounded-xl border px-3 py-2" /><button onClick=\{() => updateEvent(event.id, "specialItems", event.specialItems.filter((_, i) => i !== index))\} className="px-3 rounded-xl bg-stone-100">\uc0\u21066 \u38500 </button></div>)\}<button onClick=\{() => addItem("\u26032 \u12375 \u12356 \u25345 \u12385 \u29289 ")\} className="w-full rounded-xl bg-amber-300 py-3 font-black">\u65291 \u36861 \u21152 </button><div className="text-xs font-bold text-stone-500">\u20505 \u35036 </div><div className="flex flex-wrap gap-2">\{quickItems.map((item,index)=><div key=\{item\} className="flex items-center gap-1"><button onClick=\{()=>addItem(item)\} className="rounded-full bg-stone-200 px-3 py-2 text-sm font-bold">\{item\}</button><button onClick=\{()=>setQuickItems(prev=>prev.filter((_,i)=>i!==index))\} className="text-xs px-2 py-1 rounded-full bg-white border">\'d7</button></div>)\}</div></div>;\
+\}\
+\
+function ConfirmScreen(\{ event, items, index, setIndex, completed, setCompleted, progress, voiceEnabled, setVoiceEnabled, notYetMessage, setNotYetMessage, onSpeak, onDone \}) \{\
+  if (!event) return <EmptyCard text="\uc0\u30906 \u35469 \u12377 \u12427 \u20986 \u30330 \u12364 \u12354 \u12426 \u12414 \u12379 \u12435 \u12290 " />;\
+  if (!items.length) return <EmptyCard text="\uc0\u30906 \u35469 \u12377 \u12427 \u25345 \u12385 \u29289 \u12364 \u12354 \u12426 \u12414 \u12379 \u12435 \u12290 " />;\
+  const current = items[index];\
+  const finish = () => \{ setCompleted(true); onDone(); \};\
+  if (completed) return <section className="space-y-5"><div className=\{`rounded-[2rem] p-8 shadow-sm border text-center $\{getTheme(event.title).card\}`\}><div className="text-5xl mb-4">\uc0\u9989 </div><div className="inline-block rounded-full bg-white/70 px-4 py-2 text-sm font-black mb-4">\{event.title\} \u12481 \u12455 \u12483 \u12463 \u28168 \u12415 </div><h2 className="text-3xl font-black mb-3">\u20986 \u30330 \u30906 \u35469 \u23436 \u20102 \u65281 </h2><p className="text-stone-500">\u33853 \u12385 \u30528 \u12356 \u12390 \u20986 \u30330 \u12391 \u12365 \u12414 \u12377 \u12290 </p></div><ProgressBar value=\{100\} label=\{`$\{items.length\} / $\{items.length\}\u38917 \u30446  \u23436 \u20102 `\} /></section>;\
+  return <section className="space-y-5"><div className="flex justify-between gap-3"><ScreenTitle title=\{`$\{event.icon\} $\{event.title\}\uc0\u12398 \u30906 \u35469 `\} subtitle="1\u12388 \u12378 \u12388 \u30906 \u35469 \u12375 \u12414 \u12377 \u12290 " /><VoiceToggle enabled=\{voiceEnabled\} setEnabled=\{setVoiceEnabled\} /></div><ProgressBar value=\{progress\} label=\{`$\{index + 1\} / $\{items.length\}\u30906 \u35469 \u20013 `\} /><div className=\{`rounded-[2rem] p-6 shadow-sm border text-center space-y-5 $\{getTheme(event.title).card\}`\}><button onClick=\{onSpeak\} className="mx-auto w-20 h-20 rounded-full bg-white border shadow-sm text-4xl">\u55357 \u56586 </button><p className="text-sm font-bold text-stone-400">\u12479 \u12483 \u12503 \u12391 \u20877 \u35501 \u12415 \u19978 \u12370 </p><h2 className="text-3xl font-black leading-snug">\{current.name\}\u12289 <br />\u25345 \u12387 \u12383 \u65311 </h2><p className="inline-block rounded-full bg-white/80 px-4 py-2 text-sm font-bold text-stone-500">\{current.category\}</p></div>\{notYetMessage && <div className="rounded-[1.5rem] bg-white p-4 shadow-sm"><p className="font-bold">\u22823 \u19976 \u22827 \u12391 \u12377 \u12290 </p><p className="text-stone-500">\u21462 \u12426 \u12395 \u34892 \u12387 \u12390 \u12363 \u12425 \u12289 \u12418 \u12358 \u19968 \u24230 \u30906 \u35469 \u12375 \u12414 \u12375 \u12423 \u12358 \u12290 </p></div>\}<button onClick=\{() => index + 1 >= items.length ? finish() : setIndex(index + 1)\} className="w-full rounded-[1.5rem] bg-emerald-700 text-white py-5 text-xl font-black shadow-md">\u25345 \u12387 \u12383 </button><button onClick=\{() => setNotYetMessage(true)\} className="w-full rounded-[1.5rem] bg-white py-5 text-xl font-black text-stone-600">\u12414 \u12384 </button></section>;\
+\}\
+\
+function SettingsScreen(\{ prepReminderEnabled, setPrepReminderEnabled, prepReminderTime, setPrepReminderTime, prepDoneToday, goPrep, dailyItems, setDailyItems, templates, addTemplate, updateTemplate, addTemplateItem, updateTemplateItem, removeTemplateItem, removeTemplate \}) \{\
+  return (\
+    <section className="space-y-5">\
+      <div className="rounded-[2rem] bg-white p-5 shadow-sm border border-stone-100 space-y-4">\
+        <h2 className="text-xl font-black">\uc0\u22812 \u12398 \u28310 \u20633 \u12522 \u12510 \u12452 \u12531 \u12489 </h2>\
+        <div className="flex justify-between items-center">\
+          <span className="font-bold">\uc0\u36890 \u30693 </span>\
+          <button\
+            onClick=\{() => setPrepReminderEnabled(!prepReminderEnabled)\}\
+            className=\{`rounded-full px-4 py-2 font-bold $\{prepReminderEnabled ? "bg-emerald-100" : "bg-stone-200"\}`\}\
+          >\
+            \{prepReminderEnabled ? "ON" : "OFF"\}\
+          </button>\
+        </div>\
+        <input\
+          type="time"\
+          value=\{prepReminderTime\}\
+          onChange=\{(e) => setPrepReminderTime(e.target.value)\}\
+          className="w-full rounded-xl border px-3 py-3"\
+        />\
+        <div className="rounded-2xl bg-[#f7f3ec] p-4 text-sm">\
+          <div className="font-bold mb-1">\uc0\u36890 \u30693 \u25991 </div>\
+          \uc0\u12300 \u26126 \u26085 \u12398 \u28310 \u20633 \u12399 \u12391 \u12365 \u12414 \u12375 \u12383 \u12363 \u65311 \u12301 \
+        </div>\
+        \{prepDoneToday && (\
+          <div className="rounded-xl bg-emerald-50 p-3 font-bold text-emerald-700">\
+            \uc0\u20170 \u26085 \u12399 \u28310 \u20633 \u23436 \u20102 \u12398 \u12383 \u12417 \u36890 \u30693 \u20572 \u27490 \
+          </div>\
+        )\}\
+        <button onClick=\{goPrep\} className="w-full rounded-xl bg-stone-200 py-3 font-bold">\
+          \uc0\u36890 \u30693 \u12479 \u12483 \u12503 \u12434 \u35430 \u12377 \u65288 \u26126 \u26085 \u12398 \u28310 \u20633 \u12408 \u65289 \
+        </button>\
+      </div>\
+\
+      <ScreenTitle title="\uc0\u35373 \u23450 " subtitle="\u27598 \u26085 \u25345 \u12385 \u29289 \u12392 \u12471 \u12540 \u12531 \u21029 \u12475 \u12483 \u12488 \u12434 \u31649 \u29702 \u12375 \u12414 \u12377 \u12290 " />\
+      <EditableList title="\uc0\u27598 \u26085 \u25345 \u12388 \u12418 \u12398 " items=\{dailyItems\} setItems=\{setDailyItems\} />\
+      <TemplateEditor\
+        templates=\{templates\}\
+        addTemplate=\{addTemplate\}\
+        updateTemplate=\{updateTemplate\}\
+        addTemplateItem=\{addTemplateItem\}\
+        updateTemplateItem=\{updateTemplateItem\}\
+        removeTemplateItem=\{removeTemplateItem\}\
+        removeTemplate=\{removeTemplate\}\
+      />\
+    </section>\
+  );\
+\}\
+\
+function EditableList(\{ title, items, setItems \}) \{\
+  return <div className="rounded-[2rem] bg-white p-5 shadow-sm border border-stone-100 space-y-3"><div className="flex justify-between"><h2 className="font-bold text-lg">\{title\}</h2><button onClick=\{() => setItems((prev) => [...prev, "\uc0\u26032 \u12375 \u12356 \u25345 \u12385 \u29289 "])\} className="rounded-full bg-stone-200 px-3 py-2 text-sm font-bold">\u36861 \u21152 </button></div>\{items.map((item, index) => <div key=\{index\} className="flex gap-2"><input value=\{item\} onChange=\{(e) => setItems((prev) => prev.map((x, i) => i === index ? e.target.value : x))\} className="flex-1 rounded-2xl border px-4 py-3" /><button onClick=\{() => setItems((prev) => prev.filter((_, i) => i !== index))\} className="rounded-2xl bg-stone-100 px-3">\u21066 \u38500 </button></div>)\}</div>;\
+\}\
+\
+function TemplateEditor(\{ templates, addTemplate, updateTemplate, addTemplateItem, updateTemplateItem, removeTemplateItem, removeTemplate \}) \{\
+  return <div className="rounded-[2rem] bg-white p-5 shadow-sm border border-stone-100 space-y-4"><div className="flex justify-between"><h2 className="text-xl font-black">\uc0\u12471 \u12540 \u12531 \u21029 \u12475 \u12483 \u12488 </h2><button onClick=\{addTemplate\} className="rounded-full bg-stone-200 px-3 py-2 font-bold">\u36861 \u21152 </button></div>\{templates.map((template) => <div key=\{template.id\} className="rounded-2xl bg-[#f7f3ec] p-4 space-y-3"><div className="flex gap-2"><input value=\{template.name\} onChange=\{(e) => updateTemplate(template.id, "name", e.target.value)\} className="flex-1 rounded-xl px-3 py-2 border font-bold" /><button onClick=\{() => removeTemplate(template.id)\} className="px-3 rounded-xl bg-white">\u21066 \u38500 </button></div>\{template.items.map((item, index) => <div key=\{index\} className="flex gap-2"><input value=\{item\} onChange=\{(e) => updateTemplateItem(template.id, index, e.target.value)\} className="flex-1 rounded-xl px-3 py-2 border" /><button onClick=\{() => removeTemplateItem(template.id, index)\} className="px-3 rounded-xl bg-white">\u21066 \u38500 </button></div>)\}<button onClick=\{() => addTemplateItem(template.id)\} className="w-full rounded-xl bg-stone-200 py-2 font-bold">\u25345 \u12385 \u29289 \u12434 \u36861 \u21152 </button></div>)\}</div>;\
+\}\
+\
+function UnifiedChooserField(\{ label, value, icon, children \}) \{\
+  const [open,setOpen]=useState(false);\
+  return (\
+    <div className="rounded-2xl bg-white/70 p-4">\
+      <div className="text-xs font-bold text-stone-500 mb-1">\{label\}</div>\
+      <button onClick=\{()=>setOpen(!open)\} className="w-full rounded-xl bg-white border px-4 py-3 flex justify-between items-center text-3xl font-black tracking-tight">\
+        <span>\{icon\} \{value\}</span>\
+        <span className="text-sm font-bold px-3 py-1 rounded-full bg-stone-100 border text-stone-600">\uc0\u22793 \u26356 </span>\
+      </button>\
+      \{open && <div className="mt-3">\{children\}</div>\}\
+    </div>\
+  );\
+\}\
+\
+function TapField(\{ label, value, children, valueClassName \}) \{\
+  return (\
+    <div className="rounded-2xl bg-white/70 p-4">\
+      <div className="text-2xl font-black tracking-tight">\{label\}</div>\
+      <div className=\{`$\{valueClassName || 'text-3xl font-black tracking-tight'\} mt-2 mb-4`\}>\
+        \{value\}\
+      </div>\
+      \{children\}\
+    </div>\
+  );\
+\}\
+function StatusBadge(\{ checked \}) \{\
+  return (\
+    <span className=\{`shrink-0 rounded-full px-4 py-2 text-xs font-black $\{checked ? "bg-emerald-200 text-emerald-800 border border-emerald-300" : "bg-amber-100 text-amber-800 border border-amber-300"\}`\}>\
+      \{checked ? "\uc0\u10003  \u30906 \u35469 \u23436 \u20102 " : "\u9675  \u30906 \u35469 \u24453 \u12385 "\}\
+    </span>\
+  );\
+\}\
+function ProgressBar(\{ value, label \}) \{ return <div className="rounded-[2rem] bg-white p-4 shadow-sm border"><div className="flex justify-between text-sm font-bold text-stone-500 mb-2"><span>\uc0\u36914 \u25431 </span><span>\{label\}</span></div><div className="h-4 rounded-full bg-stone-100 overflow-hidden"><div className="h-full rounded-full bg-emerald-700" style=\{\{ width: `$\{value\}%` \}\} /></div></div>; \}\
+function VoiceToggle(\{ enabled, setEnabled \}) \{ return <button onClick=\{() => setEnabled(!enabled)\} className=\{`shrink-0 rounded-full px-4 py-2 font-bold $\{enabled ? "bg-emerald-100" : "bg-stone-200"\}`\}>\uc0\u38899 \u22768  \{enabled ? "ON" : "OFF"\}</button>; \}\
+function ScreenTitle(\{ title, subtitle \}) \{ return <div><h2 className="text-3xl font-black tracking-tight mb-2">\{title\}</h2><p className="text-stone-500 leading-relaxed">\{subtitle\}</p></div>; \}\
+function EmptyCard(\{ text \}) \{ return <div className="rounded-[2rem] bg-white p-6 shadow-sm border text-center text-stone-500 font-bold">\{text\}</div>; \}\
+function BottomNav(\{ activeScreen, setActiveScreen \}) \{\
+  const nav = [\{ key: "prep", label: "\uc0\u26126 \u26085 \u12398 \u28310 \u20633 ", icon: "\u55357 \u56523 " \}, \{ key: "check", label: "\u30906 \u35469 \u38283 \u22987 ", icon: "\u9989 ", fab: true \}, \{ key: "settings", label: "\u35373 \u23450 ", icon: "\u9881 \u65039 " \}];\
+  return <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white/95 border-t px-4 py-3"><div className="grid grid-cols-3 items-end gap-2">\{nav.map((item) => item.fab ? <button key=\{item.key\} onClick=\{() => setActiveScreen(item.key)\} className="-mt-8 flex flex-col items-center"><div className=\{`w-20 h-20 rounded-full flex items-center justify-center text-3xl shadow-lg $\{activeScreen === item.key ? "bg-emerald-700" : "bg-stone-700"\} text-white`\}>\{item.icon\}</div><div className="mt-1 text-xs font-black">\uc0\u30906 \u35469 \u38283 \u22987 </div></button> : <button key=\{item.key\} onClick=\{() => setActiveScreen(item.key)\} className=\{`rounded-2xl py-3 flex flex-col items-center gap-1 text-xs font-bold $\{activeScreen === item.key ? "bg-stone-200" : "text-stone-400"\}`\}><div className="text-xl">\{item.icon\}</div>\{item.label\}</button>)\}</div></nav>;\
+\}\
+}
